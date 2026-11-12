@@ -1,0 +1,10 @@
+{
+  "name": "gym-log",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"tests/*.test.js\"",
+    "test:e2e": "node --test \"tests/e2e/*.test.js\""
+  }
+}
