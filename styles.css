@@ -1,0 +1,32 @@
+:root {
+  --bg: #f4f5f7; --card: #ffffff; --text: #15181d; --muted: #6a7280; --line: #dfe2e8;
+  --accent: #2f6df6; --accent-text: #ffffff; --ok: #1f9d55; --warn: #b45309; --warn-bg: #fff4d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111418; --card: #1b2027; --text: #eef0f3; --muted: #9aa3b0; --line: #2b323c;
+    --accent: #5b8cff; --accent-text: #0b1020; --ok: #3ccf7a; --warn: #f5c451; --warn-bg: #3a2f10;
+  }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.4 -apple-system, system-ui, sans-serif; }
+main { padding: 16px 16px calc(84px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
+h1 { font-size: 22px; margin: 4px 0 16px; }
+h2 { font-size: 17px; margin: 0 0 8px; }
+.muted { color: var(--muted); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+button, input { font: inherit; color: inherit; }
+button { min-height: 44px; min-width: 44px; border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 0 14px; }
+button.primary { background: var(--accent); color: var(--accent-text); border-color: transparent; font-weight: 600; }
+button.danger { color: #d33; }
+input[type=text], input[type=number], input:not([type]) { min-height: 44px; width: 100%; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+#tabs { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--card); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+#tabs button { flex: 1; border: 0; border-radius: 0; background: transparent; font-size: 13px; color: var(--muted); min-height: 54px; padding: 0 2px; }
+#tabs button.active { color: var(--accent); font-weight: 700; }
+#banner { position: sticky; top: 0; z-index: 5; background: var(--warn-bg); color: var(--warn); padding: 10px 16px; font-weight: 600; }
+.row { display: flex; gap: 8px; align-items: center; }
+.row > * { flex: 1; }
+.row > .fixed { flex: 0 0 auto; }
+.exercise { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+.small-label { font-size: 12px; color: var(--muted); }
+#error-screen { padding: 32px 16px; text-align: center; }
