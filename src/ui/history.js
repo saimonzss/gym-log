@@ -1,11 +1,7 @@
 import { renderSessionEditor, prettyDate } from './today.js';
+import { sessionStats } from '../logic.js';
 
 let openId = null; // session being edited, if any
-
-const counts = (s) => {
-  const all = s.exercises.flatMap((e) => e.sets);
-  return `${all.filter((x) => x.done).length}/${all.length}`;
-};
 
 export function render(container, ctx) {
   const state = ctx.getState();
@@ -19,15 +15,26 @@ function renderList(container, state, ctx) {
   h1.textContent = 'Historial';
   container.appendChild(h1);
   if (!state.sessions.length) {
-    container.insertAdjacentHTML('beforeend', '<p class="muted">Todavía no hay sesiones.</p>');
+    container.insertAdjacentHTML('beforeend', '<div class="card"><p class="muted" style="margin:0">Todavía no hay sesiones. Aparecen acá cuando marcás tu primera serie.</p></div>');
     return;
   }
   const sorted = [...state.sessions].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   for (const s of sorted) {
+    const { done, total } = sessionStats(s);
     const b = document.createElement('button');
     b.className = 'history-item card';
-    b.style.cssText = 'display:block;width:100%;text-align:left;height:auto;padding:12px 14px';
-    b.textContent = `${prettyDate(s.date)} · ${s.dayName || 'Entrenamiento'} · ${counts(s)} series`;
+    const main = document.createElement('span');
+    main.className = 'hi-main';
+    const name = document.createElement('strong');
+    name.textContent = s.dayName || 'Entrenamiento';
+    const date = document.createElement('span');
+    date.className = 'muted';
+    date.textContent = prettyDate(s.date);
+    main.append(name, date);
+    const chip = document.createElement('span');
+    chip.className = 'chip' + (total && done === total ? ' complete' : '');
+    chip.textContent = `${done}/${total}`;
+    b.append(main, chip);
     b.addEventListener('click', () => { openId = s.id; ctx.navigate('history'); });
     container.appendChild(b);
   }
@@ -36,10 +43,11 @@ function renderList(container, state, ctx) {
 function renderEditor(container, session, ctx) {
   const back = document.createElement('button');
   back.className = 'back';
-  back.textContent = '← Historial';
+  back.textContent = '‹ Historial';
   back.addEventListener('click', () => { openId = null; ctx.navigate('history'); });
   const h1 = document.createElement('h1');
   h1.textContent = session.dayName || 'Entrenamiento';
+  h1.style.marginBottom = '2px';
   const sub = document.createElement('p');
   sub.className = 'muted';
   sub.textContent = prettyDate(session.date);
@@ -47,8 +55,8 @@ function renderEditor(container, session, ctx) {
   renderSessionEditor(container, session, ctx, { showHints: false });
 
   const del = document.createElement('button');
-  del.className = 'delete-session danger';
-  del.style.cssText = 'width:100%;margin-top:14px';
+  del.className = 'delete-session danger wide';
+  del.style.marginTop = '14px';
   del.textContent = 'Borrar esta sesión';
   del.addEventListener('click', () => {
     if (!window.confirm('¿Borrar esta sesión? No se puede deshacer.')) return;

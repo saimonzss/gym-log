@@ -6,11 +6,11 @@ import { prettyDate } from './today.js';
 export function restoreControls(onRestore) {
   const box = document.createElement('div');
   box.innerHTML = `
-    <label class="restore" style="display:block">
-      <span class="btn-like" style="display:flex;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--card)">Restaurar copia…</span>
-      <input class="restore-file" type="file" accept=".json,application/json" style="position:absolute;opacity:0;width:1px;height:1px">
+    <label class="restore" style="display:block;position:relative">
+      <span class="file-btn">Restaurar copia…</span>
+      <input class="restore-file" type="file" accept=".json,application/json">
     </label>
-    <p class="restore-error" style="color:#d33"></p>`;
+    <p class="restore-error error-text"></p>`;
   const input = box.querySelector('.restore-file');
   const error = box.querySelector('.restore-error');
   input.addEventListener('change', async () => {
@@ -52,12 +52,16 @@ export function render(container, ctx) {
   container.innerHTML = `
     <h1>Copia de seguridad</h1>
     <section class="card">
+      <h2 style="margin-bottom:6px">Guardar una copia</h2>
       <p class="muted">Tus datos viven solo en este teléfono. Guardá una copia de vez en cuando, por ejemplo en Archivos o iCloud.</p>
-      <p class="last-backup"></p>
-      <button class="export primary" style="width:100%">Exportar copia</button>
-      <p class="export-error" style="color:#d33"></p>
+      <p class="last-backup" style="font-weight:700"></p>
+      <button class="export primary wide">Exportar copia</button>
+      <p class="export-error error-text"></p>
     </section>
-    <section class="card"></section>`;
+    <section class="card">
+      <h2 style="margin-bottom:6px">Recuperar datos</h2>
+      <p class="muted">Elegí un archivo de copia para reemplazar los datos de este teléfono.</p>
+    </section>`;
   container.querySelector('.last-backup').textContent = last
     ? `Última copia: ${prettyDate(last.slice(0, 10))}`
     : 'Todavía no hiciste ninguna copia.';

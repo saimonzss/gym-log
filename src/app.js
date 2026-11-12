@@ -19,6 +19,17 @@ let state = null;
 let active = 'today';
 let reminderDismissed = false;
 
+const ICONS = {
+  today: '<path d="M6.5 6.5v11M3.5 9v6M17.5 6.5v11M20.5 9v6M6.5 12h11"/>',
+  history: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  progress: '<path d="M4 5v14h16M7.5 15l4-4.5 3 2.5 4.5-6"/>',
+  routine: '<rect x="4" y="5.5" width="16" height="14" rx="3"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>',
+  backup: '<path d="M12 4v10m0 0l-4-4m4 4l4-4M5 17.5v1A1.5 1.5 0 006.5 20h11a1.5 1.5 0 001.5-1.5v-1"/>',
+};
+tabs.querySelectorAll('button').forEach((b) => {
+  b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[b.dataset.tab]}</svg><span>${b.textContent}</span>`;
+});
+
 function showBanner(text) {
   banner.textContent = text;
   banner.hidden = !text;
@@ -31,7 +42,7 @@ function render() {
   if (!reminderDismissed && active !== 'backup' && state.sessions.length && isBackupDue(state.settings, new Date())) {
     const r = document.createElement('div');
     r.className = 'card backup-reminder';
-    r.innerHTML = '<p>Hace un mes o más que no guardás una copia de seguridad.</p><div class="row"><button class="go-backup primary">Hacer copia</button><button class="later">Más tarde</button></div>';
+    r.innerHTML = '<p style="font-weight:700">Hace un mes o más que no guardás una copia de seguridad.</p><div class="row"><button class="go-backup primary">Hacer copia</button><button class="later">Más tarde</button></div>';
     r.querySelector('.go-backup').addEventListener('click', () => ctx.navigate('backup'));
     r.querySelector('.later').addEventListener('click', () => { reminderDismissed = true; render(); });
     reminder.appendChild(r);
@@ -57,6 +68,9 @@ const ctx = {
     if (tab === 'today') today.resetDay();
     active = tab;
     render();
+    main.classList.remove('enter'); // replay the entrance animation only on navigation, not on every tap
+    void main.offsetWidth;
+    main.classList.add('enter');
   },
 };
 

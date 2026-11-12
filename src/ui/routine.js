@@ -16,11 +16,11 @@ function dayCard(d, day, ctx) {
   card.className = 'card';
   card.dataset.day = String(d);
   card.innerHTML = `
-    <h2>${DAY_NAMES[d]}</h2>
-    <div class="row">
-      <input class="day-name" type="text" placeholder="Ej: Pecho y tríceps" aria-label="Nombre del día">
-      <label class="fixed"><input class="rest-toggle" type="checkbox"> Descanso</label>
+    <div class="day-head">
+      <h2>${DAY_NAMES[d]}</h2>
+      <label class="switch">Descanso <input class="rest-toggle" type="checkbox"></label>
     </div>
+    <input class="day-name" type="text" placeholder="Nombre del día, ej: Pecho y tríceps" aria-label="Nombre del día">
     <div class="exercises"></div>`;
   const name = card.querySelector('.day-name');
   name.value = day.name;
@@ -28,14 +28,17 @@ function dayCard(d, day, ctx) {
   const rest = card.querySelector('.rest-toggle');
   rest.checked = day.rest;
   rest.addEventListener('change', () => ctx.update((s) => { s.routine[d].rest = rest.checked; return s; }));
-  if (day.rest) return card;
+  if (day.rest) {
+    name.hidden = true;
+    card.querySelector('.day-head').style.marginBottom = '0';
+    return card;
+  }
 
   const list = card.querySelector('.exercises');
   for (const ex of day.exercises) list.appendChild(exerciseRow(d, ex, ctx));
   const add = document.createElement('button');
-  add.className = 'add-exercise primary';
-  add.style.marginTop = '12px';
-  add.textContent = 'Agregar ejercicio';
+  add.className = 'add-exercise primary wide';
+  add.textContent = '+ Agregar ejercicio';
   add.addEventListener('click', () => ctx.update((s) => {
     s.routine[d].exercises.push({ id: crypto.randomUUID(), name: '', sets: 3, reps: 10 });
     return s;
@@ -49,10 +52,11 @@ function exerciseRow(d, ex, ctx) {
   row.className = 'exercise';
   row.innerHTML = `
     <input class="ex-name" type="text" placeholder="Ejercicio" aria-label="Ejercicio">
-    <div class="row" style="margin-top:8px">
-      <div><div class="small-label">Series</div><input class="ex-sets" type="number" inputmode="numeric" min="1"></div>
-      <div><div class="small-label">Reps</div><input class="ex-reps" type="number" inputmode="numeric" min="1"></div>
-      <button class="remove-exercise danger fixed" aria-label="Quitar ejercicio">Quitar</button>
+    <div class="ex-nums">
+      <label><span class="small-label">Series</span><input class="ex-sets" type="number" inputmode="numeric" min="1"></label>
+      <span class="times">×</span>
+      <label><span class="small-label">Reps</span><input class="ex-reps" type="number" inputmode="numeric" min="1"></label>
+      <button class="remove-exercise danger" aria-label="Quitar ejercicio">✕</button>
     </div>`;
   const patch = (fn) => ctx.update((s) => {
     const target = s.routine[d].exercises.find((e) => e.id === ex.id);

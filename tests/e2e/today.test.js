@@ -30,7 +30,7 @@ test('Today shows 3 sets prefilled from the last session', async () => {
   const app = await openApp(server.url, { seed: routineState({ history: [past('2026-10-01', 60)] }) });
   try {
     assert.equal(await app.page.locator('.set').count(), 3);
-    assert.match(await app.page.locator('.set-toggle').first().innerText(), /60 kg × 8/);
+    assert.match(await app.page.locator('.set-toggle').first().getAttribute('aria-label'), /60 kg × 8/);
     assert.deepEqual(app.errors, []);
   } finally { await app.close(); }
 });
@@ -50,7 +50,7 @@ test('+2,5 kg changes 60 to 62,5', async () => {
   const app = await openApp(server.url, { seed: routineState({ history: [past('2026-10-01', 60)] }) });
   try {
     await app.page.locator('.w-plus').first().click();
-    assert.match(await app.page.locator('.set-toggle').first().innerText(), /62,5 kg × 8/);
+    assert.match(await app.page.locator('.set-toggle').first().getAttribute('aria-label'), /62,5 kg × 8/);
     assert.equal(todaySessions(await readState(app.page))[0].exercises[0].sets[0].weight, 62.5);
   } finally { await app.close(); }
 });

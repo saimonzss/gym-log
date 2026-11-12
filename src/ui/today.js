@@ -1,7 +1,8 @@
-import { localDateISO, startOrResumeSession, suggestWeightIncrease, personalRecord } from '../logic.js';
+import { localDateISO, startOrResumeSession, suggestWeightIncrease, personalRecord, sessionStats } from '../logic.js';
 
 export const formatKg = (n) => String(n).replace('.', ',');
 const round = (n) => Math.round(n * 100) / 100;
+const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 // "62,5" / "62.5" -> 62.5. Returns null for empty, non-numeric or negative text.
 export function parseNumber(text) {
@@ -12,10 +13,12 @@ export function parseNumber(text) {
 }
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const WEEKDAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 export function prettyDate(iso) {
   const [y, m, d] = iso.split('-').map(Number);
   return `${d} de ${MONTHS[m - 1]} de ${y}`;
 }
+const weekday = (iso) => { const [y, m, d] = iso.split('-').map(Number); return WEEKDAYS[new Date(y, m - 1, d).getDay()]; };
 
 // The day Today is showing. It is fixed while the user works (so a workout that crosses midnight keeps
 // its day) and released when the app returns to the foreground or the Today tab is opened again.
@@ -23,24 +26,52 @@ let boundDate = null;
 export const boundDay = () => boundDate;
 export const resetDay = () => { boundDate = null; };
 
+let lastToggled = null; // "exerciseId:setIndex" of the set just tapped, so it animates once
+
+function el(tag, className, text) {
+  const n = document.createElement(tag);
+  if (className) n.className = className;
+  if (text !== undefined) n.textContent = text;
+  return n;
+}
+
 export function render(container, ctx) {
   const date = boundDate ?? (boundDate = localDateISO());
-  let session = startOrResumeSession(ctx.getState(), date);
+  const session = startOrResumeSession(ctx.getState(), date);
+  const hero = el('header', 'hero');
+  hero.append(el('div', 'eyebrow', `${weekday(date)} · ${prettyDate(date)}`), el('h1', '', session ? (session.dayName || 'Entrenamiento') : 'Descanso'));
+  container.appendChild(hero);
   if (!session) {
-    container.innerHTML = '<h1>Hoy</h1><div class="card"><p>Hoy es día de descanso.</p><p class="muted">Podés cambiarlo en la pestaña Rutina.</p></div>';
+    container.insertAdjacentHTML('beforeend', '<div class="card"><p>Hoy es día de descanso.</p><p class="muted">Podés cambiarlo en la pestaña Rutina.</p></div>');
     return;
   }
-  const h1 = document.createElement('h1');
-  h1.textContent = session.dayName || 'Entrenamiento de hoy';
-  const sub = document.createElement('p');
-  sub.className = 'muted';
-  sub.textContent = prettyDate(session.date);
-  container.append(h1, sub);
   if (session.exercises.length === 0) {
     container.insertAdjacentHTML('beforeend', '<div class="card"><p>No hay ejercicios para hoy. Agregalos en la pestaña Rutina.</p></div>');
     return;
   }
+  hero.appendChild(loadBar(session));
+  const stats = sessionStats(session);
+  const text = el('p', 'load-text');
+  text.innerHTML = `<strong>${stats.done}</strong> de ${stats.total} series`;
+  hero.appendChild(text);
   renderSessionEditor(container, session, ctx);
+}
+
+// One segment per set, grouped by exercise, like plates loaded on a bar.
+function loadBar(session) {
+  const bar = el('div', 'load');
+  bar.setAttribute('aria-hidden', 'true');
+  for (const ex of session.exercises) {
+    const group = el('div', 'load-group');
+    group.style.flex = String(Math.max(1, ex.sets.length));
+    ex.sets.forEach((s, i) => {
+      const seg = el('span', 'seg' + (s.done ? ' done' : ''));
+      if (s.done && lastToggled === `${ex.exerciseId}:${i}`) seg.classList.add('pop');
+      group.appendChild(seg);
+    });
+    bar.appendChild(group);
+  }
+  return bar;
 }
 
 export function renderSessionEditor(container, session, ctx, { showHints = true } = {}) {
@@ -56,21 +87,18 @@ export function renderSessionEditor(container, session, ctx, { showHints = true 
   const others = state.sessions.filter((s) => s.id !== sessionId);
 
   for (const ex of session.exercises) {
-    const card = document.createElement('section');
-    card.className = 'card exercise-card';
+    const card = el('section', 'card exercise-card');
     card.dataset.ex = ex.exerciseId;
+    const doneCount = ex.sets.filter((x) => x.done).length;
+    const head = el('div', 'ex-head');
+    head.append(el('h2', 'ex-title', ex.name), el('span', 'chip' + (doneCount === ex.sets.length && doneCount ? ' complete' : ''), `${doneCount}/${ex.sets.length}`));
     const record = personalRecord(state.sessions, ex.exerciseId);
-    card.innerHTML = `
-      <h2 class="ex-title"></h2>
-      <div class="muted ex-target">${ex.targetSets} × ${ex.targetReps}${record ? ` · Récord: ${formatKg(record)} kg` : ''}</div>`;
-    card.querySelector('.ex-title').textContent = ex.name;
+    card.append(head, el('div', 'muted ex-target', `${ex.targetSets} × ${ex.targetReps}${record ? ` · Récord ${formatKg(record)} kg` : ''}`));
 
     const hint = showHints ? suggestWeightIncrease(others, ex.exerciseId, state.settings) : { suggest: false };
     if (hint.suggest) {
-      const b = document.createElement('button');
-      b.className = 'suggestion primary';
-      b.style.cssText = 'margin-top:10px;width:100%';
-      b.textContent = `Subí a ${formatKg(hint.newWeight)} kg`;
+      const b = el('button', 'suggestion');
+      b.append(el('span', 'arrow', '↑'), el('span', '', `Subí a ${formatKg(hint.newWeight)} kg`));
       b.addEventListener('click', () => edit((t) => {
         t.exercises.find((e) => e.exerciseId === ex.exerciseId).sets.forEach((x) => { if (!x.done) x.weight = hint.newWeight; });
       }));
@@ -80,42 +108,44 @@ export function renderSessionEditor(container, session, ctx, { showHints = true 
     container.appendChild(card);
   }
 
+  const stats = sessionStats(session);
   if (session.finished) {
-    container.insertAdjacentHTML('beforeend', '<p class="muted" style="text-align:center">Sesión finalizada ✓</p>');
+    const sum = el('section', 'card summary');
+    sum.innerHTML = `<h2>Sesión finalizada ✓</h2><div class="tiles">
+      <p class="tile"><span class="small-label">Series</span><strong>${stats.done}/${stats.total}</strong></p>
+      <p class="tile"><span class="small-label">Volumen</span><strong>${new Intl.NumberFormat('es-AR').format(Math.round(stats.volume))} kg</strong></p></div>`;
+    container.appendChild(sum);
   } else {
-    const fin = document.createElement('button');
-    fin.className = 'finish primary';
-    fin.style.width = '100%';
-    fin.textContent = 'Finalizar';
+    const fin = el('button', 'finish primary wide' + (stats.total && stats.done === stats.total ? ' ready' : ''), 'Finalizar entrenamiento');
     fin.addEventListener('click', () => edit((t) => { t.finished = true; }));
     container.appendChild(fin);
   }
+  lastToggled = null;
 }
 
 function setRow(ex, set, i, edit) {
-  const row = document.createElement('div');
-  row.className = 'set';
+  const key = `${ex.exerciseId}:${i}`;
+  const row = el('div', 'set');
   row.dataset.set = String(i);
   row.innerHTML = `
-    <button class="set-toggle" style="width:100%;margin-top:10px"></button>
-    <div class="row" style="margin-top:6px">
-      <div class="row stepper" style="flex:3"><button class="w-minus fixed" aria-label="Menos peso">−2,5</button><input class="w-input" type="text" inputmode="decimal" aria-label="Peso en kg"><button class="w-plus fixed" aria-label="Más peso">+2,5</button></div>
-      <div class="row stepper" style="flex:2.4"><button class="r-minus fixed" aria-label="Menos repeticiones">−1</button><input class="r-input" type="text" inputmode="numeric" aria-label="Repeticiones"><button class="r-plus fixed" aria-label="Más repeticiones">+1</button></div>
-    </div>`;
+    <button class="set-toggle"><span class="set-num">${i + 1}</span>${CHECK}</button>
+    <div class="stepper w"><button class="w-minus" aria-label="Menos 2,5 kg">−2,5</button><label class="val"><input class="w-input" type="text" inputmode="decimal" aria-label="Peso en kg"><span>kg</span></label><button class="w-plus" aria-label="Más 2,5 kg">+2,5</button></div>
+    <div class="stepper r"><button class="r-minus" aria-label="Una repetición menos">−1</button><label class="val"><input class="r-input" type="text" inputmode="numeric" aria-label="Repeticiones"><span>reps</span></label><button class="r-plus" aria-label="Una repetición más">+1</button></div>`;
   const toggle = row.querySelector('.set-toggle');
   const w = row.querySelector('.w-input');
   const r = row.querySelector('.r-input');
   const paint = (s) => {
-    toggle.textContent = `${s.done ? '✓ ' : ''}Serie ${i + 1} · ${formatKg(s.weight)} kg × ${s.reps}`;
+    toggle.setAttribute('aria-label', `Serie ${i + 1} · ${formatKg(s.weight)} kg × ${s.reps}`);
     toggle.setAttribute('aria-pressed', String(s.done));
-    toggle.classList.toggle('primary', s.done);
+    row.classList.toggle('done', s.done);
   };
   paint(set);
+  if (set.done && lastToggled === key) row.classList.add('pop');
   w.value = formatKg(set.weight);
   r.value = String(set.reps);
 
   const patch = (fn, opts) => edit((t) => fn(t.exercises.find((e) => e.exerciseId === ex.exerciseId).sets[i]), opts);
-  toggle.addEventListener('click', () => patch((x) => { x.done = !x.done; }));
+  toggle.addEventListener('click', () => { lastToggled = key; patch((x) => { x.done = !x.done; }); });
   row.querySelector('.w-minus').addEventListener('click', () => patch((x) => { x.weight = Math.max(0, round(x.weight - 2.5)); }));
   row.querySelector('.w-plus').addEventListener('click', () => patch((x) => { x.weight = round(x.weight + 2.5); }));
   row.querySelector('.r-minus').addEventListener('click', () => patch((x) => { x.reps = Math.max(0, x.reps - 1); }));

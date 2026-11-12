@@ -144,3 +144,11 @@ test('trainedDates returns dates with at least one done set in the month', () =>
   ];
   assert.deepEqual([...trainedDates(sessions, '2026-11')].sort(), ['2026-11-01', '2026-11-08']);
 });
+
+test('sessionStats counts done sets, total sets and volume of done sets only', async () => {
+  const { sessionStats } = await import('../src/logic.js');
+  const s = sess('2026-11-01', [[60, 8, true], [62.5, 6, true], [100, 8, false]]);
+  s.exercises.push({ exerciseId: 'b', name: 'Fondos', targetSets: 2, targetReps: 10, sets: [{ weight: 0, reps: 10, done: true }, { weight: 0, reps: 10, done: false }] });
+  assert.deepEqual(sessionStats(s), { done: 3, total: 5, volume: 60 * 8 + 62.5 * 6 });
+  assert.deepEqual(sessionStats({ exercises: [] }), { done: 0, total: 0, volume: 0 });
+});

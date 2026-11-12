@@ -21,13 +21,13 @@ test('a workout crossing midnight stays on its day until the app comes back to t
     await app.page.locator('.set-toggle').nth(1).click();
     await app.page.clock.setFixedTime(new Date(2026, 10, 13, 0, 5));
     await app.page.locator('.set-toggle').nth(2).click(); // still the same workout
-    assert.match(await app.page.locator('main').innerText(), /12 de noviembre/);
+    assert.match(await app.page.locator('main').innerText(), /12 de noviembre/i);
     assert.deepEqual(await flags(app.page), ['true', 'true', 'true']);
     const sessions = (await readState(app.page)).sessions;
     assert.deepEqual(sessions.map((x) => x.date), ['2026-11-12']);
 
     await app.page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
-    assert.match(await app.page.locator('main').innerText(), /13 de noviembre/);
+    assert.match(await app.page.locator('main').innerText(), /13 de noviembre/i);
     assert.deepEqual(await flags(app.page), ['false', 'false', 'false']);
   } finally { await app.close(); }
 });
@@ -38,6 +38,6 @@ test('opening the Today tab again after midnight shows the new day', async () =>
     await app.page.click('[data-tab="routine"]');
     await app.page.clock.setFixedTime(new Date(2026, 10, 13, 8, 0));
     await app.page.click('[data-tab="today"]');
-    assert.match(await app.page.locator('main').innerText(), /13 de noviembre/);
+    assert.match(await app.page.locator('main').innerText(), /13 de noviembre/i);
   } finally { await app.close(); }
 });

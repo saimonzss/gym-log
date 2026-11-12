@@ -83,3 +83,10 @@ export function trainedDates(sessions, yearMonth) {
       .map((s) => s.date),
   );
 }
+
+// Done sets, total sets and lifted volume (kg × reps over done sets) of one session.
+export function sessionStats(session) {
+  const all = session.exercises.flatMap((e) => e.sets);
+  const done = all.filter((x) => x.done);
+  return { done: done.length, total: all.length, volume: done.reduce((sum, x) => sum + x.weight * x.reps, 0) };
+}
