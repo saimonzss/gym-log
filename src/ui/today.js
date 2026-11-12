@@ -41,7 +41,7 @@ export function render(container, ctx) {
   renderSessionEditor(container, session, ctx);
 }
 
-export function renderSessionEditor(container, session, ctx) {
+export function renderSessionEditor(container, session, ctx, { showHints = true } = {}) {
   const sessionId = session.id;
   const edit = (fn, opts) => ctx.update((s) => {
     const target = s.sessions.find((x) => x.id === sessionId);
@@ -61,7 +61,7 @@ export function renderSessionEditor(container, session, ctx) {
       <div class="muted ex-target">${ex.targetSets} × ${ex.targetReps}${record ? ` · Récord: ${formatKg(record)} kg` : ''}</div>`;
     card.querySelector('.ex-title').textContent = ex.name;
 
-    const hint = suggestWeightIncrease(others, ex.exerciseId, state.settings);
+    const hint = showHints ? suggestWeightIncrease(others, ex.exerciseId, state.settings) : { suggest: false };
     if (hint.suggest) {
       const b = document.createElement('button');
       b.className = 'suggestion primary';
