@@ -39,6 +39,7 @@ export async function openApp(url, { seed } = {}) {
     acceptDownloads: true, serviceWorkers: 'block',
   });
   const page = await context.newPage();
+  page.setDefaultTimeout(4000);
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   if (seed !== undefined) {

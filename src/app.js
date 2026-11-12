@@ -1,8 +1,9 @@
 import { loadState, saveState, StorageError, requestPersistence } from './storage.js';
 import * as routine from './ui/routine.js';
+import * as today from './ui/today.js';
 
 const placeholder = { render(c) { c.innerHTML = '<p class="muted">Próximamente</p>'; } };
-const screens = { today: placeholder, history: placeholder, progress: placeholder, routine, backup: placeholder };
+const screens = { today, history: placeholder, progress: placeholder, routine, backup: placeholder };
 
 const main = document.getElementById('main');
 const banner = document.getElementById('banner');
