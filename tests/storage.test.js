@@ -35,3 +35,8 @@ test('saveState throws StorageError when setItem fails with quota error', () => 
   const store = { getItem: () => null, setItem() { const e = new Error('full'); e.name = 'QuotaExceededError'; throw e; } };
   assert.throws(() => saveState(defaultState(), store), StorageError);
 });
+
+test('loadState with valid JSON but invalid inner data throws StorageError', () => {
+  const bad = JSON.stringify({ version: 1, routine: {}, sessions: [null], settings: {} });
+  assert.throws(() => loadState(fakeStore({ 'gymlog.state': bad })), StorageError);
+});

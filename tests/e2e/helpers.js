@@ -32,12 +32,13 @@ export function startServer() {
 }
 
 // Opens a phone-sized page. `seed` (object or raw string) is written to localStorage once per tab.
-export async function openApp(url, { seed, serviceWorkers = 'block' } = {}) {
+export async function openApp(url, { seed, serviceWorkers = 'block', clockAt } = {}) {
   const browser = await chromium.launch();
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1,
     acceptDownloads: true, serviceWorkers,
   });
+  if (clockAt) await context.clock.install({ time: clockAt });
   const page = await context.newPage();
   page.setDefaultTimeout(4000);
   const errors = [];

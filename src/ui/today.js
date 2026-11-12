@@ -17,16 +17,18 @@ export function prettyDate(iso) {
   return `${d} de ${MONTHS[m - 1]} de ${y}`;
 }
 
+// The day Today is showing. It is fixed while the user works (so a workout that crosses midnight keeps
+// its day) and released when the app returns to the foreground or the Today tab is opened again.
+let boundDate = null;
+export const boundDay = () => boundDate;
+export const resetDay = () => { boundDate = null; };
+
 export function render(container, ctx) {
-  const date = localDateISO();
+  const date = boundDate ?? (boundDate = localDateISO());
   let session = startOrResumeSession(ctx.getState(), date);
   if (!session) {
     container.innerHTML = '<h1>Hoy</h1><div class="card"><p>Hoy es día de descanso.</p><p class="muted">Podés cambiarlo en la pestaña Rutina.</p></div>';
     return;
-  }
-  if (!ctx.getState().sessions.some((s) => s.id === session.id)) {
-    const created = session;
-    ctx.update((s) => { s.sessions.push(created); return s; }, { rerender: false });
   }
   const h1 = document.createElement('h1');
   h1.textContent = session.dayName || 'Entrenamiento de hoy';
@@ -43,9 +45,11 @@ export function render(container, ctx) {
 
 export function renderSessionEditor(container, session, ctx, { showHints = true } = {}) {
   const sessionId = session.id;
+  // A session built from the routine is only saved on its first edit.
   const edit = (fn, opts) => ctx.update((s) => {
-    const target = s.sessions.find((x) => x.id === sessionId);
-    if (target) fn(target);
+    let target = s.sessions.find((x) => x.id === sessionId);
+    if (!target) { target = structuredClone(session); s.sessions.push(target); }
+    fn(target);
     return s;
   }, opts);
   const state = ctx.getState();

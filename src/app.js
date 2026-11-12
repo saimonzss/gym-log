@@ -6,6 +6,7 @@ import * as progress from './ui/progress.js';
 import * as backup from './ui/backup-screen.js';
 import { restoreControls } from './ui/backup-screen.js';
 import { isBackupDue } from './backup.js';
+import { localDateISO } from './logic.js';
 
 const placeholder = { render(c) { c.innerHTML = '<p class="muted">Próximamente</p>'; } };
 const screens = { today, history, progress, routine, backup };
@@ -51,7 +52,12 @@ const ctx = {
     }
     if (rerender) render();
   },
-  navigate(tab) { active = tab; render(); },
+  navigate(tab) {
+    if (!state) return;
+    if (tab === 'today') today.resetDay();
+    active = tab;
+    render();
+  },
 };
 
 function showError(message) {
@@ -74,6 +80,15 @@ function showError(message) {
     render();
   }));
 }
+
+function onForeground() {
+  const bound = today.boundDay();
+  if (!state || document.visibilityState !== 'visible' || !bound || bound === localDateISO()) return;
+  today.resetDay();
+  if (active === 'today') render();
+}
+document.addEventListener('visibilitychange', onForeground);
+window.addEventListener('pageshow', onForeground);
 
 tabs.addEventListener('click', (e) => {
   const tab = e.target.closest('button')?.dataset.tab;

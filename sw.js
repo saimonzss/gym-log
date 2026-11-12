@@ -9,6 +9,7 @@ const FILES = [
   'src/backup.js',
   'src/logic.js',
   'src/storage.js',
+  'src/validate.js',
   'src/ui/backup-screen.js',
   'src/ui/history.js',
   'src/ui/progress.js',

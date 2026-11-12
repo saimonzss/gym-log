@@ -1,3 +1,5 @@
+import { validateState } from './validate.js';
+
 const KEY = 'gymlog.state';
 
 export class StorageError extends Error {
@@ -29,7 +31,9 @@ export function loadState(store = globalThis.localStorage) {
   }
   if (raw === null || raw === undefined) return defaultState();
   try {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    validateState(parsed);
+    return parsed;
   } catch (e) {
     throw new StorageError('Los datos guardados están dañados');
   }

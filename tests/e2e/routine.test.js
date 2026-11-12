@@ -39,6 +39,7 @@ test('corrupt saved data shows the error screen instead of a blank page', async 
   const app = await openApp(server.url, { seed: '{roto' });
   try {
     assert.equal(await app.page.isVisible('#error-screen'), true);
+    assert.equal(await app.page.isVisible('#tabs'), false);
     assert.equal(await app.page.evaluate(() => localStorage.getItem('gymlog.state')), '{roto');
   } finally { await app.close(); }
 });

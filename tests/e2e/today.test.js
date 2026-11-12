@@ -82,9 +82,26 @@ test('typing 62,5 works and empty or invalid text never stores NaN', async () =>
 test('opening Today twice does not duplicate the session', async () => {
   const app = await openApp(server.url, { seed: routineState() });
   try {
+    await app.page.locator('.set-toggle').first().click();
     await app.page.reload();
     await app.page.reload();
     assert.equal(todaySessions(await readState(app.page)).length, 1);
+  } finally { await app.close(); }
+});
+
+test('opening Today alone saves nothing, and exercises added to the routine later show up', async () => {
+  const s = routineState();
+  s.routine[DAY].exercises = [];
+  const app = await openApp(server.url, { seed: s });
+  try {
+    assert.match(await app.page.locator('main').innerText(), /No hay ejercicios/);
+    assert.equal(todaySessions(await readState(app.page)).length, 0);
+    await app.page.click('[data-tab="routine"]');
+    await app.page.click(`[data-day="${DAY}"] .add-exercise`);
+    await app.page.fill(`[data-day="${DAY}"] .ex-name`, 'Remo');
+    await app.page.click('[data-tab="today"]');
+    assert.equal(await app.page.locator('.exercise-card').count(), 1);
+    assert.equal(await app.page.locator('.set').count(), 3);
   } finally { await app.close(); }
 });
 

@@ -42,3 +42,32 @@ test('isBackupDue: null is due, 29 days is not, 30 days is', () => {
   assert.equal(isBackupDue({ lastBackupAt: ago(29) }, now), false);
   assert.equal(isBackupDue({ lastBackupAt: ago(30) }, now), true);
 });
+
+function wrap(mutate) {
+  const s = defaultState();
+  s.sessions = [{ id: 's1', date: '2026-10-01', dayIndex: 1, dayName: 'Pecho', finished: true,
+    exercises: [{ exerciseId: 'e', name: 'Press', targetSets: 1, targetReps: 8, sets: [{ weight: 60, reps: 8, done: true }] }] }];
+  mutate(s);
+  return JSON.stringify({ app: 'gym-log', version: 1, exportedAt: 'x', state: s });
+}
+
+test('parseBackup accepts a deeply valid state', () => {
+  assert.doesNotThrow(() => parseBackup(wrap(() => {})));
+});
+
+for (const [name, mutate] of [
+  ['a null session', (s) => { s.sessions = [null]; }],
+  ['a session without exercises', (s) => { delete s.sessions[0].exercises; }],
+  ['a string weight', (s) => { s.sessions[0].exercises[0].sets[0].weight = '60'; }],
+  ['a negative weight', (s) => { s.sessions[0].exercises[0].sets[0].weight = -5; }],
+  ['non-integer reps', (s) => { s.sessions[0].exercises[0].sets[0].reps = 7.5; }],
+  ['a non-boolean done flag', (s) => { s.sessions[0].exercises[0].sets[0].done = 'yes'; }],
+  ['a bad session date', (s) => { s.sessions[0].date = 'ayer'; }],
+  ['empty settings', (s) => { s.settings = {}; }],
+  ['a routine exercise with zero sets', (s) => { s.routine[1].exercises = [{ id: 'a', name: 'x', sets: 0, reps: 8 }]; }],
+  ['an unknown state version', (s) => { s.version = 2; }],
+]) {
+  test(`parseBackup rejects ${name}`, () => {
+    assert.throws(() => parseBackup(wrap(mutate)), BackupError);
+  });
+}
