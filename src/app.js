@@ -87,3 +87,5 @@ try {
 } catch (e) {
   showError(e instanceof StorageError ? e.message : 'Error inesperado');
 }
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
