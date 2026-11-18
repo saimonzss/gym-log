@@ -26,8 +26,6 @@ let boundDate = null;
 export const boundDay = () => boundDate;
 export const resetDay = () => { boundDate = null; };
 
-let lastToggled = null; // "exerciseId:setIndex" of the set just tapped, so it animates once
-
 function el(tag, className, text) {
   const n = document.createElement(tag);
   if (className) n.className = className;
@@ -66,7 +64,7 @@ function loadBar(session) {
     group.style.flex = String(Math.max(1, ex.sets.length));
     ex.sets.forEach((s, i) => {
       const seg = el('span', 'seg' + (s.done ? ' done' : ''));
-      if (s.done && lastToggled === `${ex.exerciseId}:${i}`) seg.classList.add('pop');
+      seg.dataset.key = `${ex.exerciseId}:${i}`;
       group.appendChild(seg);
     });
     bar.appendChild(group);
@@ -104,7 +102,7 @@ export function renderSessionEditor(container, session, ctx, { showHints = true 
       }));
       card.appendChild(b);
     }
-    ex.sets.forEach((set, i) => card.appendChild(setRow(ex, set, i, edit)));
+    ex.sets.forEach((set, i) => card.appendChild(setRow(ex, set, i, edit, () => container)));
     container.appendChild(card);
   }
 
@@ -120,10 +118,29 @@ export function renderSessionEditor(container, session, ctx, { showHints = true 
     fin.addEventListener('click', () => edit((t) => { t.finished = true; }));
     container.appendChild(fin);
   }
-  lastToggled = null;
 }
 
-function setRow(ex, set, i, edit) {
+// After a set is tapped, refresh the counters that depend on it without rebuilding the screen
+// (a rebuild flashes on iPhone and restarts every animation).
+function syncProgress(container, key, done) {
+  const seg = document.querySelector(`.hero .seg[data-key="${key}"]`);
+  if (seg) seg.classList.toggle('done', done);
+  const rows = container.querySelectorAll('.set');
+  const doneRows = container.querySelectorAll('.set.done').length;
+  const text = document.querySelector('.hero .load-text');
+  if (text) text.innerHTML = `<strong>${doneRows}</strong> de ${rows.length} series`;
+  for (const card of container.querySelectorAll('.exercise-card')) {
+    const n = card.querySelectorAll('.set').length;
+    const d = card.querySelectorAll('.set.done').length;
+    const chip = card.querySelector('.chip');
+    chip.textContent = `${d}/${n}`;
+    chip.classList.toggle('complete', d === n && d > 0);
+  }
+  const fin = container.querySelector('.finish');
+  if (fin) fin.classList.toggle('ready', rows.length > 0 && doneRows === rows.length);
+}
+
+function setRow(ex, set, i, edit, getContainer) {
   const key = `${ex.exerciseId}:${i}`;
   const row = el('div', 'set');
   row.dataset.set = String(i);
@@ -140,23 +157,30 @@ function setRow(ex, set, i, edit) {
     row.classList.toggle('done', s.done);
   };
   paint(set);
-  if (set.done && lastToggled === key) row.classList.add('pop');
   w.value = formatKg(set.weight);
   r.value = String(set.reps);
 
-  const patch = (fn, opts) => edit((t) => fn(t.exercises.find((e) => e.exerciseId === ex.exerciseId).sets[i]), opts);
-  toggle.addEventListener('click', () => { lastToggled = key; patch((x) => { x.done = !x.done; }); });
-  row.querySelector('.w-minus').addEventListener('click', () => patch((x) => { x.weight = Math.max(0, round(x.weight - 2.5)); }));
-  row.querySelector('.w-plus').addEventListener('click', () => patch((x) => { x.weight = round(x.weight + 2.5); }));
-  row.querySelector('.r-minus').addEventListener('click', () => patch((x) => { x.reps = Math.max(0, x.reps - 1); }));
-  row.querySelector('.r-plus').addEventListener('click', () => patch((x) => { x.reps += 1; }));
+  // Every change writes absolute values, so the first edit of a not-yet-saved session stays correct.
+  const save = (values) => edit((t) => Object.assign(t.exercises.find((e) => e.exerciseId === ex.exerciseId).sets[i], values), { rerender: false });
+  toggle.addEventListener('click', () => {
+    set.done = !set.done;
+    paint(set);
+    save({ done: set.done });
+    syncProgress(getContainer(), key, set.done);
+  });
+  const setWeight = (n) => { set.weight = n; w.value = formatKg(n); paint(set); save({ weight: n }); };
+  const setReps = (n) => { set.reps = n; r.value = String(n); paint(set); save({ reps: n }); };
+  row.querySelector('.w-minus').addEventListener('click', () => setWeight(Math.max(0, round(set.weight - 2.5))));
+  row.querySelector('.w-plus').addEventListener('click', () => setWeight(round(set.weight + 2.5)));
+  row.querySelector('.r-minus').addEventListener('click', () => setReps(Math.max(0, set.reps - 1)));
+  row.querySelector('.r-plus').addEventListener('click', () => setReps(set.reps + 1));
   w.addEventListener('input', () => {
     const n = parseNumber(w.value);
-    if (n !== null) { set.weight = n; paint(set); patch((x) => { x.weight = n; }, { rerender: false }); }
+    if (n !== null) { set.weight = n; paint(set); save({ weight: n }); }
   });
   r.addEventListener('input', () => {
     const n = parseNumber(r.value);
-    if (n !== null && Number.isInteger(n)) { set.reps = n; paint(set); patch((x) => { x.reps = n; }, { rerender: false }); }
+    if (n !== null && Number.isInteger(n)) { set.reps = n; paint(set); save({ reps: n }); }
   });
   return row;
 }

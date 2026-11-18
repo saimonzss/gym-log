@@ -61,9 +61,8 @@ input[type=text], input[type=number], select { min-height: 46px; width: 100%; pa
 .hero h1 { font-size: 32px; margin: 4px 0 0; }
 .load { display: flex; gap: 8px; margin-top: 18px; }
 .load-group { display: flex; gap: 3px; }
-.seg { flex: 1; height: 10px; border-radius: 5px; background: var(--seg); }
+.seg { flex: 1; height: 10px; border-radius: 5px; background: var(--seg); transition: background-color .3s ease; }
 .seg.done { background: var(--green); }
-.seg.pop { animation: seg .4s ease; }
 .load-text { margin: 8px 0 0; font-size: 14px; color: var(--hero-muted); }
 .load-text strong { color: var(--hero-text); font-size: 16px; }
 
@@ -74,12 +73,15 @@ input[type=text], input[type=number], select { min-height: 46px; width: 100%; pa
 .suggestion .arrow { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--yellow); color: var(--on-yellow); font-weight: 900; }
 .set { display: flex; align-items: center; gap: 8px; padding: 6px; margin: 8px -6px 0; border-radius: 16px; transition: background .25s ease; }
 .set.done { background: var(--green-soft); }
-.set-toggle { flex: none; width: 46px; height: 46px; min-width: 46px; padding: 0; border-radius: 50%; border: 2px solid var(--line); background: transparent; font-weight: 800; font-size: 16px; display: grid; place-items: center; }
-.set-toggle svg { display: none; width: 24px; height: 24px; }
+.set-toggle { flex: none; position: relative; width: 46px; height: 46px; min-width: 46px; padding: 0; border-radius: 50%; border: 2px solid var(--line); background: transparent; font-weight: 800; font-size: 16px; display: grid; place-items: center;
+  transition: background-color .22s ease, border-color .22s ease, color .22s ease, transform .08s ease; }
+.set-toggle > * { grid-area: 1 / 1; }
+.set-num { transition: opacity .15s ease, transform .2s ease; }
+.set-toggle svg { width: 24px; height: 24px; }
+.set-toggle svg path { stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset .28s ease .06s; }
 .set.done .set-toggle { background: var(--green); border-color: var(--green); color: var(--on-green); }
-.set.done .set-toggle svg { display: block; }
-.set.done .set-num { display: none; }
-.set.pop .set-toggle { animation: pop .38s cubic-bezier(.3, 1.7, .5, 1); }
+.set.done .set-toggle svg path { stroke-dashoffset: 0; }
+.set.done .set-num { opacity: 0; transform: scale(.6); }
 .stepper { display: flex; align-items: stretch; min-width: 0; min-height: 48px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); overflow: hidden; }
 .stepper.w { flex: 1.3; }
 .stepper.r { flex: 1; }
@@ -89,6 +91,7 @@ input[type=text], input[type=number], select { min-height: 46px; width: 100%; pa
 .val input { border: 0; border-radius: 0; background: transparent; width: 100%; min-height: 26px; padding: 0; text-align: center; font-weight: 800; font-size: 18px; }
 .val input:focus-visible { outline: none; background: var(--field); }
 .val span { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: -2px; padding-bottom: 3px; }
+.finish { transition: background-color .25s ease, color .25s ease; }
 .finish.ready { background: var(--green); color: var(--on-green); animation: glow 1.6s ease-in-out infinite; }
 .summary { text-align: center; border-color: var(--green); }
 .summary h2 { color: var(--green); margin-bottom: 12px; }
@@ -145,7 +148,5 @@ input[type=text], input[type=number], select { min-height: 46px; width: 100%; pa
 .error-text:empty { display: none; }
 
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@keyframes pop { 0% { transform: scale(.7); } 100% { transform: scale(1); } }
-@keyframes seg { 0% { transform: scaleY(2.2); } 100% { transform: scaleY(1); } }
 @keyframes glow { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 45%, transparent); } 50% { box-shadow: 0 0 0 8px transparent; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

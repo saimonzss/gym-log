@@ -139,3 +139,39 @@ test('rest day shows the rest message and creates no session', async () => {
     assert.equal(todaySessions(await readState(app.page)).length, 0);
   } finally { await app.close(); }
 });
+
+test('tapping a set or a stepper updates that row in place without rebuilding the screen', async () => {
+  const app = await openApp(server.url, { seed: routineState({ history: [past('2026-10-01', 60)] }) });
+  try {
+    await app.page.evaluate(() => {
+      document.querySelector('.set').__marker = 1;
+      document.querySelector('.exercise-card').__marker = 1;
+    });
+    await app.page.locator('.set-toggle').first().click();
+    await app.page.locator('.w-plus').first().click();
+    await app.page.locator('.r-plus').first().click();
+    const same = await app.page.evaluate(() => document.querySelector('.set').__marker === 1 && document.querySelector('.exercise-card').__marker === 1);
+    assert.equal(same, true, 'screen was rebuilt');
+    assert.equal(await app.page.locator('.set-toggle').first().getAttribute('aria-pressed'), 'true');
+    assert.equal(await app.page.inputValue('.w-input >> nth=0'), '62,5');
+    assert.equal(await app.page.inputValue('.r-input >> nth=0'), '9');
+    assert.equal(await app.page.locator('.exercise-card .chip').first().innerText(), '1/3');
+    assert.equal(await app.page.locator('.seg.done').count(), 1);
+    assert.match(await app.page.locator('.load-text').innerText(), /1 de 3/);
+    const set = todaySessions(await readState(app.page))[0].exercises[0].sets[0];
+    assert.deepEqual(set, { weight: 62.5, reps: 9, done: true });
+  } finally { await app.close(); }
+});
+
+test('marking every set makes Finalizar ready, unmarking one undoes it', async () => {
+  const app = await openApp(server.url, { seed: routineState() });
+  try {
+    for (let i = 0; i < 3; i++) await app.page.locator('.set-toggle').nth(i).click();
+    assert.match(await app.page.locator('.finish').getAttribute('class'), /ready/);
+    assert.equal(await app.page.locator('.exercise-card .chip').first().innerText(), '3/3');
+    await app.page.locator('.set-toggle').nth(1).click();
+    assert.doesNotMatch(await app.page.locator('.finish').getAttribute('class'), /ready/);
+    const sets = todaySessions(await readState(app.page))[0].exercises[0].sets;
+    assert.deepEqual(sets.map((x) => x.done), [true, false, true]);
+  } finally { await app.close(); }
+});
