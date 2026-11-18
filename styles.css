@@ -90,6 +90,7 @@ input[type=text], input[type=number], select { min-height: 46px; width: 100%; pa
 .val { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; border-inline: 1px solid var(--line); }
 .val input { border: 0; border-radius: 0; background: transparent; width: 100%; min-height: 26px; padding: 0; text-align: center; font-weight: 800; font-size: 18px; }
 .val input:focus-visible { outline: none; background: var(--field); }
+.val input::placeholder { color: var(--muted); opacity: .55; }
 .val span { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: -2px; padding-bottom: 3px; }
 .finish { transition: background-color .25s ease, color .25s ease; }
 .finish.ready { background: var(--green); color: var(--on-green); animation: glow 1.6s ease-in-out infinite; }

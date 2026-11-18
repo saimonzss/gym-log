@@ -195,3 +195,35 @@ test('renaming an exercise in the routine after starting today updates Hoy and t
     assert.deepEqual(app.errors, []);
   } finally { await app.close(); }
 });
+
+test('a zero weight shows as a grey placeholder so typing needs no deleting', async () => {
+  const app = await openApp(server.url, { seed: routineState() }); // no history: weight 0
+  try {
+    const w = app.page.locator('.w-input').first();
+    assert.equal(await w.inputValue(), '');
+    assert.equal(await w.getAttribute('placeholder'), '0');
+    await w.click();
+    await app.page.keyboard.type('40');
+    assert.equal(await w.inputValue(), '40');
+    assert.equal(todaySessions(await readState(app.page))[0].exercises[0].sets[0].weight, 40);
+  } finally { await app.close(); }
+});
+
+test('stepping down to 0 shows the placeholder again', async () => {
+  const app = await openApp(server.url, { seed: routineState({ history: [past('2026-10-01', 2.5)] }) });
+  try {
+    await app.page.locator('.w-minus').first().click();
+    assert.equal(await app.page.locator('.w-input').first().inputValue(), '');
+    assert.equal(todaySessions(await readState(app.page))[0].exercises[0].sets[0].weight, 0);
+  } finally { await app.close(); }
+});
+
+test('clearing a weight and leaving the field restores the saved value', async () => {
+  const app = await openApp(server.url, { seed: routineState({ history: [past('2026-10-01', 60)] }) });
+  try {
+    const w = app.page.locator('.w-input').first();
+    await w.fill('');
+    await w.blur();
+    assert.equal(await w.inputValue(), '60');
+  } finally { await app.close(); }
+});

@@ -5,6 +5,9 @@ const round = (n) => Math.round(n * 100) / 100;
 const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 // "62,5" / "62.5" -> 62.5. Returns null for empty, non-numeric or negative text.
+// Zero is shown as the field's grey placeholder, so the user can type a weight without deleting it first.
+const fieldText = (n, fmt) => (n === 0 ? '' : fmt(n));
+
 export function parseNumber(text) {
   const t = String(text).trim().replace(',', '.');
   if (t === '') return null;
@@ -159,8 +162,10 @@ function setRow(ex, set, i, edit, getContainer) {
     row.classList.toggle('done', s.done);
   };
   paint(set);
-  w.value = formatKg(set.weight);
-  r.value = String(set.reps);
+  w.placeholder = '0';
+  r.placeholder = '0';
+  w.value = fieldText(set.weight, formatKg);
+  r.value = fieldText(set.reps, String);
 
   // Every change writes absolute values, so the first edit of a not-yet-saved session stays correct.
   const save = (values) => edit((t) => Object.assign(t.exercises.find((e) => e.exerciseId === ex.exerciseId).sets[i], values), { rerender: false });
@@ -170,8 +175,11 @@ function setRow(ex, set, i, edit, getContainer) {
     save({ done: set.done });
     syncProgress(getContainer(), key, set.done);
   });
-  const setWeight = (n) => { set.weight = n; w.value = formatKg(n); paint(set); save({ weight: n }); };
-  const setReps = (n) => { set.reps = n; r.value = String(n); paint(set); save({ reps: n }); };
+  const setWeight = (n) => { set.weight = n; w.value = fieldText(n, formatKg); paint(set); save({ weight: n }); };
+  const setReps = (n) => { set.reps = n; r.value = fieldText(n, String); paint(set); save({ reps: n }); };
+  // Leaving a field empty or invalid shows the saved value again instead of a blank box.
+  w.addEventListener('blur', () => { w.value = fieldText(set.weight, formatKg); });
+  r.addEventListener('blur', () => { r.value = fieldText(set.reps, String); });
   row.querySelector('.w-minus').addEventListener('click', () => setWeight(Math.max(0, round(set.weight - 2.5))));
   row.querySelector('.w-plus').addEventListener('click', () => setWeight(round(set.weight + 2.5)));
   row.querySelector('.r-minus').addEventListener('click', () => setReps(Math.max(0, set.reps - 1)));
