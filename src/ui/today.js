@@ -74,10 +74,12 @@ function loadBar(session) {
 
 export function renderSessionEditor(container, session, ctx, { showHints = true } = {}) {
   const sessionId = session.id;
-  // A session built from the routine is only saved on its first edit.
+  // Saves what this screen shows: a session built from the routine is first saved on its first edit,
+  // and a saved one is replaced by its routine-synced copy, so both always match the rows on screen.
   const edit = (fn, opts) => ctx.update((s) => {
-    let target = s.sessions.find((x) => x.id === sessionId);
-    if (!target) { target = structuredClone(session); s.sessions.push(target); }
+    const target = structuredClone(session);
+    const i = s.sessions.findIndex((x) => x.id === sessionId);
+    if (i === -1) s.sessions.push(target); else s.sessions[i] = target;
     fn(target);
     return s;
   }, opts);

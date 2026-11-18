@@ -175,3 +175,23 @@ test('marking every set makes Finalizar ready, unmarking one undoes it', async (
     assert.deepEqual(sets.map((x) => x.done), [true, false, true]);
   } finally { await app.close(); }
 });
+
+test('renaming an exercise in the routine after starting today updates Hoy and the saved session', async () => {
+  const app = await openApp(server.url, { seed: routineState({ history: [past('2026-10-01', 60)] }) });
+  try {
+    await app.page.locator('.set-toggle').first().click(); // today's session is now saved
+    await app.page.click('[data-tab="routine"]');
+    await app.page.fill(`[data-day="${DAY}"] .ex-name`, 'Press banca plano');
+    await app.page.click(`[data-day="${DAY}"] .add-exercise`);
+    await app.page.fill(`[data-day="${DAY}"] .exercise >> nth=1 >> .ex-name`, 'Fondos');
+    await app.page.click('[data-tab="today"]');
+    const titles = await app.page.locator('.ex-title').allInnerTexts();
+    assert.deepEqual(titles, ['Press banca plano', 'Fondos']);
+    assert.equal(await app.page.locator('.set-toggle').first().getAttribute('aria-pressed'), 'true');
+    await app.page.locator('.exercise-card').nth(1).locator('.set-toggle').first().click();
+    const saved = todaySessions(await readState(app.page))[0];
+    assert.deepEqual(saved.exercises.map((e) => e.name), ['Press banca plano', 'Fondos']);
+    assert.deepEqual(saved.exercises.map((e) => e.sets[0].done), [true, true]);
+    assert.deepEqual(app.errors, []);
+  } finally { await app.close(); }
+});

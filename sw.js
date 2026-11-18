@@ -1,5 +1,5 @@
 // Bump VERSION on every deploy so phones fetch the new files.
-const VERSION = 'gymlog-v2';
+const VERSION = 'gymlog-v3';
 const FILES = [
   './',
   'index.html',

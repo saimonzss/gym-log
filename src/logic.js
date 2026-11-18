@@ -37,10 +37,10 @@ export function suggestWeightIncrease(sessions, exerciseId, settings) {
 
 export function startOrResumeSession(state, dateISO) {
   const existing = state.sessions.find((s) => s.date === dateISO);
-  if (existing) return existing;
   const [y, m, d] = dateISO.split('-').map(Number);
   const dayIndex = new Date(y, m - 1, d).getDay();
   const day = state.routine[dayIndex];
+  if (existing) return day && !day.rest ? followRoutine(existing, day, state.sessions) : existing;
   if (!day || day.rest) return null;
   return {
     id: globalThis.crypto.randomUUID(),
@@ -56,6 +56,29 @@ export function startOrResumeSession(state, dateISO) {
       sets: prefillSets(state.sessions, ex.id, ex.sets, ex.reps),
     })),
   };
+}
+
+// Copy of a saved session updated to the day's current routine: names, targets, added exercises
+// (prefilled) and removed ones (kept only if they have done sets). A done set is never removed.
+function followRoutine(session, day, sessions) {
+  const others = sessions.filter((s) => s.id !== session.id);
+  const exercises = day.exercises.map((ex) => {
+    const saved = session.exercises.find((e) => e.exerciseId === ex.id);
+    if (!saved) {
+      return { exerciseId: ex.id, name: ex.name, targetSets: ex.sets, targetReps: ex.reps, sets: prefillSets(others, ex.id, ex.sets, ex.reps) };
+    }
+    const sets = saved.sets.map((x) => ({ ...x }));
+    while (sets.length < ex.sets) {
+      const last = sets[sets.length - 1];
+      sets.push(last ? { weight: last.weight, reps: last.reps, done: false } : { weight: 0, reps: ex.reps, done: false });
+    }
+    while (sets.length > ex.sets && !sets[sets.length - 1].done) sets.pop();
+    return { ...saved, name: ex.name, targetSets: ex.sets, targetReps: ex.reps, sets };
+  });
+  const kept = session.exercises
+    .filter((e) => !day.exercises.some((ex) => ex.id === e.exerciseId) && e.sets.some((x) => x.done))
+    .map((e) => structuredClone(e));
+  return { ...session, dayName: day.name, exercises: [...exercises, ...kept] };
 }
 
 function doneSets(session, exerciseId) {

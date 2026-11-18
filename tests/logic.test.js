@@ -152,3 +152,78 @@ test('sessionStats counts done sets, total sets and volume of done sets only', a
   assert.deepEqual(sessionStats(s), { done: 3, total: 5, volume: 60 * 8 + 62.5 * 6 });
   assert.deepEqual(sessionStats({ exercises: [] }), { done: 0, total: 0, volume: 0 });
 });
+
+// --- today's saved session follows later routine edits ---
+function savedToday(state, date) {
+  const s = startOrResumeSession(state, date);
+  state.sessions.push(s);
+  return s;
+}
+function chestState() {
+  const state = defaultState();
+  state.routine[1] = { name: 'Pecho', rest: false, exercises: [{ id: 'ex1', name: 'Pres banca', sets: 3, reps: 8 }] };
+  state.sessions.push(sess('2026-11-09', full(60)));
+  return state;
+}
+
+test('resuming today picks up a renamed exercise and day name, keeping sets and id', () => {
+  const state = chestState();
+  const first = savedToday(state, '2026-11-16');
+  first.exercises[0].sets[0].done = true;
+  state.routine[1].name = 'Pecho y tríceps';
+  state.routine[1].exercises[0].name = 'Press banca';
+  const again = startOrResumeSession(state, '2026-11-16');
+  assert.equal(again.id, first.id);
+  assert.equal(again.dayName, 'Pecho y tríceps');
+  assert.equal(again.exercises[0].name, 'Press banca');
+  assert.equal(again.exercises[0].sets[0].done, true);
+  assert.equal(first.exercises[0].name, 'Pres banca', 'stored session must not be mutated');
+});
+
+test('resuming today adds an exercise added to the routine, prefilled, in routine order', () => {
+  const state = chestState();
+  state.sessions.push({ ...sess('2026-11-02', full(20), { id: 'ex0', name: 'Aperturas' }), id: 'old' });
+  savedToday(state, '2026-11-16');
+  state.routine[1].exercises.unshift({ id: 'ex0', name: 'Aperturas', sets: 2, reps: 12 });
+  const again = startOrResumeSession(state, '2026-11-16');
+  assert.deepEqual(again.exercises.map((e) => e.exerciseId), ['ex0', 'ex1']);
+  assert.equal(again.exercises[0].sets.length, 2);
+  assert.equal(again.exercises[0].sets[0].weight, 20);
+  assert.equal(again.exercises[0].sets[0].done, false);
+});
+
+test('resuming today drops a removed exercise unless it has done sets', () => {
+  const state = chestState();
+  state.routine[1].exercises.push({ id: 'ex2', name: 'Fondos', sets: 3, reps: 10 });
+  const first = savedToday(state, '2026-11-16');
+  first.exercises[0].sets[1].done = true; // ex1 has work done
+  state.routine[1].exercises = [];
+  const again = startOrResumeSession(state, '2026-11-16');
+  assert.deepEqual(again.exercises.map((e) => e.exerciseId), ['ex1']);
+});
+
+test('resuming today follows target changes without ever removing a done set', () => {
+  const state = chestState();
+  const first = savedToday(state, '2026-11-16');
+  first.exercises[0].sets[2].done = true;
+  first.exercises[0].sets[2].weight = 65;
+  state.routine[1].exercises[0].sets = 5;
+  state.routine[1].exercises[0].reps = 10;
+  let again = startOrResumeSession(state, '2026-11-16');
+  assert.equal(again.exercises[0].targetSets, 5);
+  assert.equal(again.exercises[0].targetReps, 10);
+  assert.equal(again.exercises[0].sets.length, 5);
+  assert.deepEqual(again.exercises[0].sets[4], { weight: 65, reps: 8, done: false });
+
+  state.routine[1].exercises[0].sets = 1;
+  again = startOrResumeSession(state, '2026-11-16');
+  assert.equal(again.exercises[0].sets.length, 3, 'the done third set must survive');
+  assert.equal(again.exercises[0].sets[2].done, true);
+});
+
+test('resuming a day that became a rest day returns the saved session unchanged', () => {
+  const state = chestState();
+  const first = savedToday(state, '2026-11-16');
+  state.routine[1].rest = true;
+  assert.deepEqual(startOrResumeSession(state, '2026-11-16'), first);
+});
